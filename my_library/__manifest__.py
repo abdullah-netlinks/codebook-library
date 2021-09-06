@@ -17,6 +17,7 @@ Description related to library.
         'security/ir.model.access.csv',
         'views/library_book.xml',
         'views/library_book_categ.xml',
+        'views/res_partner.xml',
     ],
     # 'demo': [
     #     'demo.xml'
