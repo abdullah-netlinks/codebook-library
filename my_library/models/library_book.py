@@ -1,12 +1,28 @@
 # -*- coding: utf-8 -*-
+import logging
+
 from odoo import models, fields, api
 from datetime import timedelta
+from odoo.exceptions import UserError
+from odoo.tools.translate import _
+
+logger = logging.getLogger(__name__)
 
 
+class BaseArchive(models.AbstractModel):
+    _name = 'base.archive'
+
+    active = fields.Boolean(default=True)
+
+    def do_archive(self):
+        for record in self:
+            record.active = not record.active
+  
 class LibraryBook(models.Model):
     _name = 'library.book'
     _description = 'Library Book'
-    _order = 'date_release desc, name'
+    # _order = 'date_release desc, name'
+    _inherit = ['base.archive']
     # _rec_name = 'short_name'
 
     name = fields.Char('Title', required=True)
@@ -16,8 +32,9 @@ class LibraryBook(models.Model):
     short_name = fields.Char('Short Title',translate=True, index=True)
     notes = fields.Text('Internal Notes')
     state = fields.Selection(
-        [('draft', 'Not Available'),
+        [('draft', 'Unavailable'),
         ('available', 'Available'),
+        ('borrowed', 'Borrowed'),
         ('lost', 'Lost')],
         'State',default="draft")
     description = fields.Html('Description',sanitize=True, strip_style=False)
@@ -64,6 +81,135 @@ class LibraryBook(models.Model):
         string="Reference Document"
     )
 
+    # Sorting recordset
+    def sort_books(self):
+        all_books = self.search([])
+        print(all_books)
+        books_sorted = self.sort_books_by_date(all_books)
+        logger.info('Books before sorting: %s', all_books)
+        logger.info('Books after sorting: %s', books_sorted)
+
+    @api.model
+    def sort_books_by_date(self, all_books):
+        print('running the sorting method now ..')
+        return all_books.sorted(key='date_release')
+
+    # TRAVERSING RECORDSETS: creating a dataset from attributes of a model
+    def list_author_names(self):
+        all_books = self.search([])
+        author_names = self.get_author_names(all_books)
+        print(author_names)
+
+    
+    @api.model
+    def get_author_names(self, books):
+        return books.mapped('author_ids.name')
+
+
+
+    # FILTERING RECORDSETS    
+    def filter_books(self):
+        all_books = self.search([])
+        filtered_books = self.books_with_multiple_authors(all_books)
+        print(len(filtered_books))
+    
+    @api.model
+    def books_with_multiple_authors(self, all_books):
+
+        def predicate(book):
+            # if len(book.author_ids) > 1:
+            if len(book.author_ids) > 1:
+                return True
+        return all_books.filter(predicate)
+
+        
+
+    # SEARCHING:
+    """ just a search function with a custom domain. results of the search
+    were logged in the server. we hardcoded the search domain just to see
+    how it works """
+    def find_book(self):
+        domain = [
+            '|',
+                '|', ('name','ilike','Essentials'),
+                     ('category_id.name','ilike','Category Name'),
+                '|', ('name','ilike','Java'),
+                     ('category_id.name','ilike','Category Name 2'),
+ 
+        ]
+
+        books = self.search(domain)
+        for book in books:
+            print(book.name)
+ 
+
+
+
+    # UPDATING RECORDSETS
+    def change_release_date(self):
+        # self.ensure_one()
+        # for book in self:
+        self.update({
+            'date_release': fields.Date.today()
+        })
+        self.date_release = fields.Date.today()
+        print (f'Updated date for record {self.id}')
+
+
+    #SEARCHING OUTSIDE CURRENT MODEL
+    def log_all_library_members(self):
+        library_member_model = self.env['library.member']
+        all_members = library_member_model.search([])
+        for member in all_members:
+            print("Member:", member)
+        return True
+
+    def fetch_partners(self):
+        partner_model = self.env['res.partner']
+        inactive_partners = partner_model.search([('active','=',True)])
+        print(len(inactive_partners))
+            # result is 38
+        active_partners = partner_model.search([('active','=',True)])
+        print(len(active_partners))
+            # result is 5
+        all_partners = active_partners + inactive_partners
+        print(len(all_partners))
+            # result is 43
+
+        # for partner in active_partners:
+        #     print(partner.name) 
+        return True
+
+    #UPDATING STATUS AND ACTIONS
+    @api.model
+    def _is_allowed_transition(self, old_state, new_state):
+        allowed = [
+            ('draft','available'),
+            ('available','borrowed'),
+            ('borrowed','available'),
+            ('available','lost'),
+            ('borrowed','lost'),
+            ('lost','available')]
+        return (old_state, new_state) in allowed
+
+    def change_state(self, new_state):
+        for book in self:
+            if book._is_allowed_transition(book.state, new_state):
+                book.state = new_state
+            else:
+                msg = _('Moving from %s to %s is not allowed') % (book.state, new_state)
+                raise UserError(msg)
+
+    def make_available(self):
+        self.change_state('available')
+
+    def make_borrowed(self):
+        print('running parent function ..')
+        self.change_state('borrowed')
+
+    def make_lost(self):
+        self.change_state('lost')
+
     @api.model
     def _referencable_models(self):
         models = self.env['ir.model'].search([
@@ -79,6 +225,7 @@ class LibraryBook(models.Model):
             result.append((record.id, rec_name))
         return result
 
+    # APPLYING CONSTRAINTS
     @api.constrains('date_release')
     def _check_release_date(self):
         for record in self:
@@ -89,10 +236,11 @@ class LibraryBook(models.Model):
     _sql_constraints = [
             ('name_uniq', 'UNIQUE (name)',
             'Book title must be unique.'),
-            ('positive_page', 'CHECK(pages>0)',
+            ('positive_page', 'CHECK(pages>=0)',
             'No of pages must be positive')
         ]
 
+    # CREATING COMPUTED FIELDS
     @api.depends('date_release')
     def _compute_age(self):
         today = fields.Date.today()
@@ -123,8 +271,6 @@ class LibraryBook(models.Model):
         return [('date_release', new_op, value_date)]
 
 
-    
-
 class ResPartner(models.Model):
     _inherit = 'res.partner'
     _order = 'name'
@@ -146,3 +292,18 @@ class ResPartner(models.Model):
     def _compute_count_books(self):
         for r in self:
             r.count_books = len(r.authored_book_ids)
+
+    
+class LibraryMember(models.Model):
+    _name = 'library.member'
+    _inherits = {'res.partner': 'partner_id'}
+    
+    partner_id = fields.Many2one(
+        'res.partner',
+        ondelete='cascade')
+    date_start = fields.Date('Member Since')
+    date_end = fields.Date('Termination Date')
+    member_number = fields.Char()
+    date_of_birth = fields.Date('Date of birth')
+
+

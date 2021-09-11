@@ -17,12 +17,25 @@
         <field name="model">library.book</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="make_available" string="Make Available" type="object"/>
+                    <button name="make_borrowed" string="Make Borrowed" type="object"/>
+                    <button name="make_lost" string="Make Lost" type="object"/>
+                    <button name="log_all_library_members" string="Log Memberss" type="object" class="btn btn-secondary o_button_upload_bill"/>
+                    <button name="change_release_date" string="Set Release To Today" type="object"/>
+                    <button name="find_book" string="Search Books" type="object"/>
+                    <button name="fetch_partners" string="Fetch Partners" type="object"/>
+                    <button name="filter_books" string="Log books with 2 authors" type="object"/>
+                    <button name="list_author_names" string="Author Names" type="object"/>
+                    <button name="sort_books" string="Log Sorted Books" type="object"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
                 <sheet>
+                   
                     <group>
                         <group>
                             <field name="name"/>
                             <field name="author_ids" widget="many2many_tags"/>
-                            <field name="state"/>
                             <field name="publisher_id"/>
                             <field name="publisher_city"/>
                             <field name="pages"/>
