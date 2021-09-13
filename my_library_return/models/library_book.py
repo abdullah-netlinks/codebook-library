@@ -10,7 +10,7 @@ class LibraryBook(models.Model):
     date_return = fields.Date('Date to return')
 
     def make_borrowed(self):
-        print('running extended function ..')
+        print('running child function ..')
         day_to_borrow = self.category_id.max_borrow_days or 10
         self.date_return = fields.Date.today() + timedelta(days=day_to_borrow)
         return super(LibraryBook, self).make_borrowed()

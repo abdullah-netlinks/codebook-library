@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from odoo import models, fields, api
+from odoo import models, fields, api, exceptions
 from datetime import timedelta
 from odoo.exceptions import UserError
 from odoo.tools.translate import _
@@ -80,6 +80,7 @@ class LibraryBook(models.Model):
         selection='_referencable_models',
         string="Reference Document"
     )
+    manager_remarks = fields.Text('Manager Remarks')
 
     # Sorting recordset
     def sort_books(self):
@@ -88,6 +89,27 @@ class LibraryBook(models.Model):
         books_sorted = self.sort_books_by_date(all_books)
         logger.info('Books before sorting: %s', all_books)
         logger.info('Books after sorting: %s', books_sorted)
+
+    @api.model
+    def create(self, values):
+        if not self.user_has_groups('my_library.group_librarian'):
+            if values['manager_remarks']:
+                print(values["manager_remarks"])
+                raise UserError(
+                    "You are not allowed to add a value in 'manager_remarks'"
+                )
+        return super(LibraryBook, self).create(values)
+
+    # @api.model YOU CAN'T USE API.MODEL HERE AS IT WILL PASS AN ADDITIONAL PARAMETER AND THUS 
+    # 
+    def write(self, values):
+        if not self.user_has_groups('my_library.acl_book_librarian'):
+            if 'manager_remarks' in values:
+                raise UserError(
+                    'You are not allowed to edit '
+                    'manager_remarks'
+                )
+        return super(LibraryBook, self).write(values)
 
     @api.model
     def sort_books_by_date(self, all_books):
