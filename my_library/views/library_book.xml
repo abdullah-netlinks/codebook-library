@@ -37,6 +37,8 @@
                             <field name="name"/>
                             <field name="author_ids" widget="many2many_tags"/>
                             <field name="publisher_id"/>
+                            <field name="old_edition"/>
+                            <field name="isbn"/>
                             <field name="publisher_city"/>
                             <field name="pages"/>
                             <field name="notes"/>

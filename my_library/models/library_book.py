@@ -30,6 +30,7 @@ class LibraryBook(models.Model):
     author_ids = fields.Many2many('res.partner', string='Authors')
     # short_name = fields.Char('Short Title', required=True)
     short_name = fields.Char('Short Title',translate=True, index=True)
+    isbn = fields.Char('ISBN')
     notes = fields.Text('Internal Notes')
     state = fields.Selection(
         [('draft', 'Unavailable'),
@@ -81,6 +82,8 @@ class LibraryBook(models.Model):
         string="Reference Document"
     )
     manager_remarks = fields.Text('Manager Remarks')
+    old_edition = fields.Many2one('library.book', string='Old Edition')
+
 
     # Sorting recordset
     def sort_books(self):
@@ -94,22 +97,38 @@ class LibraryBook(models.Model):
     def create(self, values):
         if not self.user_has_groups('my_library.group_librarian'):
             if values['manager_remarks']:
-                print(values["manager_remarks"])
                 raise UserError(
                     "You are not allowed to add a value in 'manager_remarks'"
                 )
         return super(LibraryBook, self).create(values)
 
-    # @api.model YOU CAN'T USE API.MODEL HERE AS IT WILL PASS AN ADDITIONAL PARAMETER AND THUS 
-    # 
+    # @api.model YOU CAN'T USE API.MODEL HERE AS IT WILL PASS AN ADDITIONAL PARAMETER AND THUS AN ERROR
+    
     def write(self, values):
         if not self.user_has_groups('my_library.acl_book_librarian'):
             if 'manager_remarks' in values:
-                raise UserError(
-                    'You are not allowed to edit '
-                    'manager_remarks'
-                )
+                del values['manager_remarks']
+                # raise UserError(
+                #     'You are not allowed to edit '
+                #     'manager_remarks'
+                # )
         return super(LibraryBook, self).write(values)
+
+
+    def unlink(self):
+        print('running unlink extended')
+        if not self.user_has_groups('my_library.group_librarian'):
+            print('user doesnot have group')
+            raise UserError(
+                        'You cannot delete books'
+                    ) # This popup will prevent the function from further proceeding
+                      # to calling the super unlink method
+        else:
+            print('user has group')
+        return super(LibraryBook, self).unlink()
+
+    
+
 
     @api.model
     def sort_books_by_date(self, all_books):
@@ -242,10 +261,60 @@ class LibraryBook(models.Model):
     
     def name_get(self):
         result = []
-        for record in self:
-            rec_name = "%s [%s]" % (record.name, record.date_release)
-            result.append((record.id, rec_name))
+        for book in self:
+            authors = book.author_ids.mapped('name')
+            name = '%s (%s)' % (book.name, ', '.join(authors))
+            result.append((book.id, name))
         return result
+
+    @api.model
+    def _name_search(self, name='', args=None, operator='ilike', limit=100, name_get_uid=None):
+        args = [] if args is None else args.copy()
+        if not(name == '' and operator == 'ilike'):
+            args += ['|', '|', '|',
+                ('name', operator, name),
+                ('isbn', operator, name),
+                ('author_ids.name', operator, name)
+            ]
+        return super(LibraryBook, self)._name_search(
+            name=name, args=args, operator=operator,
+            limit=limit, name_get_uid=name_get_uid)
+
+
+    # @api.model
+    # def _name_search(self, name='', args=None, operator='ilike', limit=100, name_get_uid=None):
+    #     args = [] if args is None else args.copy()
+    #     if not(name == '' and operator == 'ilike'):
+    #         args += ['|', '|',
+    #         ('name', operator, name),
+    #         ('isbn', operator, name),
+    #         ('author_ids.name', operator, name)
+    #         ]
+    #     return super(LibraryBook, self)._name_search(name=name, args=args, operator=operator,
+    #                                                 limit=limit, name_get_uid=name_get_uid)
+
+
+
+
+    # def _name_search(self, name='', args=None, operator='ilike',limit=100, name_get_uid=None):
+    #     args = [] if args is None else args.copy()
+    #     if not (name == '' and operator == 'ilike'):
+    #         args += ['|',
+    #                     '|',
+    #                         ('name', operator, name),
+    #                         ('isbn', operator, name),
+    #                         ('author_ids.name', operator, name),            
+    #                     ]
+    #     return super(LibraryBook, self)._name_search(
+    #         name=name, args=args, operator=operator, limit=limit, name_get_uid=name_get_uid
+    #     )
+
+
+        # result = []
+        # for record in self:
+        #     rec_name = "%s [%s]" % (record.name, record.date_release)
+        #     result.append((record.id, rec_name))
+        # return result
 
     # APPLYING CONSTRAINTS
     @api.constrains('date_release')
