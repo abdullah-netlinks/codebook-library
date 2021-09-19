@@ -84,23 +84,40 @@ class LibraryBook(models.Model):
     manager_remarks = fields.Text('Manager Remarks')
     old_edition = fields.Many2one('library.book', string='Old Edition')
 
+    def get_xml(self):
+        book = self.env.ref('my_library.book_cookbook1')
+        print('book')
 
+    def grouped_data(self):
+        data = self._get_average_cost()
+        print(data)
+        # _logger.info("Groupped Data %s" % data)
+
+    @api.model
+    def _get_average_cost(self):
+        grouped_result = self.read_group(
+            [('cost_price', "!=", False)], # Domain
+            ['category_id', 'cost_price:avg'], # Fields to access
+            ['category_id'] # group_by
+            )
+        return grouped_result
+    
     # Sorting recordset
     def sort_books(self):
         all_books = self.search([])
         print(all_books)
         books_sorted = self.sort_books_by_date(all_books)
-        logger.info('Books before sorting: %s', all_books)
-        logger.info('Books after sorting: %s', books_sorted)
+        # logger.info('Books before sorting: %s', all_books)
+        # logger.info('Books after sorting: %s', books_sorted)
 
-    @api.model
-    def create(self, values):
-        if not self.user_has_groups('my_library.group_librarian'):
-            if values['manager_remarks']:
-                raise UserError(
-                    "You are not allowed to add a value in 'manager_remarks'"
-                )
-        return super(LibraryBook, self).create(values)
+    # @api.model
+    # def create(self, values):
+    #     if not self.user_has_groups('my_library.group_librarian'):
+    #         if values['manager_remarks']:
+    #             raise UserError(
+    #                 "You are not allowed to add a value in 'manager_remarks'"
+    #             )
+    #     return super(LibraryBook, self).create(values)
 
     # @api.model YOU CAN'T USE API.MODEL HERE AS IT WILL PASS AN ADDITIONAL PARAMETER AND THUS AN ERROR
     
@@ -115,17 +132,17 @@ class LibraryBook(models.Model):
         return super(LibraryBook, self).write(values)
 
 
-    def unlink(self):
-        print('running unlink extended')
-        if not self.user_has_groups('my_library.group_librarian'):
-            print('user doesnot have group')
-            raise UserError(
-                        'You cannot delete books'
-                    ) # This popup will prevent the function from further proceeding
-                      # to calling the super unlink method
-        else:
-            print('user has group')
-        return super(LibraryBook, self).unlink()
+    # def unlink(self):
+    #     print('running unlink extended')
+    #     if not self.user_has_groups('my_library.group_librarian'):
+    #         print('user doesnot have group')
+    #         raise UserError(
+    #                     'You cannot delete books'
+    #                 ) # This popup will prevent the function from further proceeding
+    #                   # to calling the super unlink method
+    #     else:
+    #         print('user has group')
+    #     return super(LibraryBook, self).unlink()
 
     
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- <record id="book_cookbook1" model="library.book">
+        <field name="name">Odoo 12 Development Cookbook </field>
+        <field name="isbn">2241111 </field>
+        <field name="short_name">Odoo 12 Development Cookbook For Dummies </field>
+    </record>
+
+    <record id="book_cookbook2" model="library.book">
+        <field name="name">Odoo 13 Development Cookbook </field>
+    </record>
+
+    <record id="book_cookbook3" model="library.book">
+        <field name="name">Odoo 14 Development Cookbook </field>
+    </record>
+     -->
+    <record id="base.main_company" model="res.company">
+        <field name="name">Packt publishing</field>
+        <field name="vat">99999</field>
+    </record>
+
+</odoo>

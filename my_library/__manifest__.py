@@ -18,6 +18,7 @@ Description related to library.
         'views/library_book.xml',
         'views/library_book_categ.xml',
         'views/res_partner.xml',
+        'data/data.xml',
     ],
     # 'demo': [
     #     'demo.xml'
