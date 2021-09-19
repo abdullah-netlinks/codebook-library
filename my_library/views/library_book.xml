@@ -29,6 +29,7 @@
                     <button name="list_author_names" string="Author Names" type="object"/>
                     <button name="sort_books" string="Log Sorted Books" type="object"/>
                     <button name="get_xml" string="Get XML" type="object"/>
+                    <button name="create_categories" string="Create Book Categories" type="object"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>

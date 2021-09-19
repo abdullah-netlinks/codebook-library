@@ -147,6 +147,31 @@ class LibraryBook(models.Model):
     
 
 
+    def create_categories(self):
+        book_category = self.env['library.book.category']
+
+        categ1 = {
+            'name': 'AAA Children Bed Time Stories',
+            'description': 'Books with illustrations for kids'
+        }
+        # categ2 = {
+        #     'name': 'Agatha Cristy Novels',
+        #     'description': 'Agatha Cristy Novels for Crime and Murder cases'
+        # }
+        # parent_category_val = {
+        #     'name': 'XXFiction Novels [Parent Category]',
+        #     'description': 'XXAll types of Fiction Novels and Books',
+        #     'child_ids': [
+        #         (0, 0, categ1), # 0, 0 is used when you want a record to belong to a parent record.
+        #         (0, 0, categ2)
+        #     ]
+        # }
+        # THREE APPROACHES TO CREATE: 
+        # APPROACH 1: 
+        print('creating a book category now ..')
+        record = book_category.create(categ1)
+
+    
     @api.model
     def sort_books_by_date(self, all_books):
         print('running the sorting method now ..')
