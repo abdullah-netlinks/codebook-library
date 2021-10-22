@@ -84,6 +84,34 @@ class LibraryBook(models.Model):
     manager_remarks = fields.Text('Manager Remarks')
     old_edition = fields.Many2one('library.book', string='Old Edition')
 
+    def book_rent(self):
+        self.ensure_one()
+        if self.state != 'available':
+            raise UserError(_(
+                'Book is not available for renting'
+            ))
+        rent_as_superuser = self.env['library.book.rent'].sudo()
+        rent_as_superuser.create({
+            'book_id': self.id,
+            'borrower_id': self.env.user.partner_id.id,
+        })
+        print('create method ran ..')
+        # self.update({
+        #     'state': 'borrowed'
+        # })
+        # raise UserError(_(
+        #         'A rent record has been created!'
+        #     ))
+
+
+    @api.model
+    def _update_book_price(self):
+        print('updating book prices ...')
+        all_books = self.search([])
+        for book in all_books:
+            book.cost_price += 10
+    
+
     def get_xml(self):
         book = self.env.ref('my_library.book_cookbook1')
         print('book')
@@ -273,7 +301,10 @@ class LibraryBook(models.Model):
             ('available','lost'),
             ('borrowed','lost'),
             ('lost','available')]
-        return (old_state, new_state) in allowed
+        if old_state != new_state:
+            return (old_state, new_state) in allowed
+        else:
+            raise UserError(_(f'This book is already set as {new_state}'))
 
     def change_state(self, new_state):
         for book in self:
@@ -291,7 +322,11 @@ class LibraryBook(models.Model):
         self.change_state('borrowed')
 
     def make_lost(self):
+        print('running make lost function in library.book .........')
+        self.ensure_one()
         self.change_state('lost')
+        if not self.env.context.get('avoid_deactivate'):
+            self.active = False
 
     @api.model
     def _referencable_models(self):
@@ -305,8 +340,13 @@ class LibraryBook(models.Model):
         result = []
         for book in self:
             authors = book.author_ids.mapped('name')
-            name = '%s (%s)' % (book.name, ', '.join(authors))
-            result.append((book.id, name))
+            if authors:    
+                name = '%s (%s)' % (book.name, ', '.join(authors))
+                result.append((book.id, name))
+            else:
+                name = '%s (%s)' % (book.name, 'No Authors')
+                # name = book.name
+                result.append((book.id, name))
         return result
 
     @api.model
@@ -321,6 +361,25 @@ class LibraryBook(models.Model):
         return super(LibraryBook, self)._name_search(
             name=name, args=args, operator=operator,
             limit=limit, name_get_uid=name_get_uid)
+
+    def average_book_occupation(self):
+        self.flush()
+        sql_query = """
+                    SELECT
+                        lb.name,
+                        avg((EXTRACT(epoch from age(return_date, rent_date)) / 86400))::int
+                    FROM
+                        library_book_rent AS lbr
+                    JOIN
+                        library_book as lb ON lb.id = lbr.book_id
+                    
+                    GROUP BY lb.name;"""
+        self.env.cr.execute(sql_query)
+        result = self.env.cr.dictfetchall()
+        # for book in result:
+        #     print(book)
+        print(f'result .... {result}')
+        
 
 
     # @api.model
@@ -438,5 +497,4 @@ class LibraryMember(models.Model):
     date_end = fields.Date('Termination Date')
     member_number = fields.Char()
     date_of_birth = fields.Date('Date of birth')
-
-
+ 

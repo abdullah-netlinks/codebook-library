@@ -8,6 +8,7 @@
         <field name="view_mode">kanban,tree,form</field>
     </record>
 
+    <menuitem name="My Library" id="library_base_menu"/>
     <menuitem name="Book Category" id="library_book_categ_menu" parent="library_base_menu" action="library_book_categ_action"/>
 
 
@@ -41,5 +42,17 @@
         </field>
     </record>
 
+        
+    
+        <odoo noupdate="1">
+            <!-- <record id="book_category_to_delete" model="library.book.category">
+                <field name="name">Test Category</field>
+            </record> -->
+        </odoo>
+       
+
+        <record id="book_category_not_delete" model="library.book.category">
+            <field name="name">Test Category 2</field>
+        </record>
 
 </odoo>
